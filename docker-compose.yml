@@ -1,0 +1,60 @@
+version: '3'
+
+services:
+  mysql:
+    image: mysql:5.6
+    container_name: mysql
+    environment:
+    - MYSQL_ROOT_PASSWORD=admin
+    - MYSQL_DATABASE=timecoder
+    volumes:
+    - "./mycustom.cnf:/etc/mysql/conf.d/custom.cnf"
+    restart: always
+    ports:
+      - 3306:3306
+  timecoder-api:
+    image: spirogov/timecoder:latest
+    container_name: timecoder
+    depends_on:
+    - mysql
+    environment:
+    - SPRING_PROFILES_ACTIVE=prod
+    - USER_NAME=root
+    - PASSWORD=admin
+    links:
+    - mysql
+    restart: always
+    ports:
+      - 8089:8080
+  timecoder-patrons:
+    image: spirogov/timecoder-patrons:latest
+    container_name: timecoder-patrons
+    environment:
+      - accessToken=
+      - campaign=
+    restart: always  
+  timecoder-gateway:
+   image: spirogov/timecoder-gateway:4fcf661
+   container_name: timecoder-gateway
+   depends_on:
+    - mysql
+   environment:
+   - SPRING_PROFILES_ACTIVE=prod
+   - USER_NAME=root
+   - PASSWORD=admin
+   links:
+   - timecoder-api
+   ports:
+   - 8086:5000
+   restart: always
+  ui:
+    image: spirogov/timecoder-ui:latest
+    container_name: timecoder-ui
+    ports:
+      - "8087:80"
+      - "443:443"
+    volumes:
+      - "./local/nginx.conf:/etc/nginx/conf.d/default.conf"
+    links:
+      - timecoder-gateway
+    restart: always
